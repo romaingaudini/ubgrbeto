@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Connexion</title>
+<link rel="shortcut icon" href="https://lh3.googleusercontent.com/ywesC1_Rzifbvs8qVqqp5xJQN1IkP2VQ7hcDU7KKiNJx7nb5oD4bE3VNN9Pk3ZGaFHtF=w300" />
+    <link rel="stylesheet" href="styles.css">
+    <style>        /* Style spécifique pour la page de connexion */        body {            display: flex;            justify-content: center;            align-items: center;            min-height: 100vh;            background-color: #e6ecf2; /* Fond clair cohérent */        }        .login-container {            background: white;            padding: 30px;            border-radius: 8px;            box-shadow: 0 4px 12px rgba(0, 51, 102, 0.2);            width: 350px;            text-align: center;        }        .login-container h2 {            color: #003366;            margin-bottom: 20px;            border-bottom: none;        }        .login-form input {            width: 100%;            padding: 10px;            margin-bottom: 15px;            border: 1px solid #ccc;            border-radius: 4px;            box-sizing: border-box;        }        .login-form button {            background-color: #0066cc;            color: white;            padding: 10px;            border: none;            border-radius: 4px;            width: 100%;            cursor: pointer;            font-size: 1.1em;            font-weight: bold;        }        .error-message {            color: #e74c3c;            margin-top: 10px;            font-weight: bold;        }    </style>	<style>        body {            display: flex; justify-content: center; align-items: center;            min-height: 100vh; background-color: #e6ecf2;            margin: 0;            background-image: url('https://www.ubaghana.com/wp-content/uploads/sites/14/2018/10/uba-board-learning-session-2016-20-1.jpg');            background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;        }        .login-container {            background: white; padding: 30px; border-radius: 8px;            box-shadow: 0 4px 12px rgba(0, 51, 102, 0.2); width: 350px; text-align: center;        }        .login-container h2 { color: #003366; margin-bottom: 20px; border-bottom: none; }        .login-form input {            width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;        }        .login-form button {            background-color: #0066cc; color: white; padding: 10px; border: none; border-radius: 4px; width: 100%;            cursor: pointer; font-size: 1.1em; font-weight: bold;        }        .error-message { color: #e74c3c; margin-top: 10px; font-weight: bold; }    </style>
+</head>
+<body>
+
+ <div class="login-container">
+<center><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQmgBPamQ4FqjuAOLjePDjYJLTCwFWIrYnNOdhxdWkZ5Q&s=10" height=200 width=210></center>
+    <h2>Connexion Espace Client</h2>
+    <form id="login-form">
+        <input type="text" id="clientCode" placeholder="Code Client (Ex: 2804300160)" required></br>
+        <input type="password" id="pin" placeholder="Code PIN (Ex: 685141)" required></br></br>
+        <button type="submit">Accéder à mes comptes</button>
+        <p id="login-error" class="error" style="display: none; margin-top: 15px;"></p>
+    </form>
+</div>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script src="shared.js"></script>
+<script>
+// Ce script est maintenant ASYNCHRONE et utilise correctement 'await getUsers()'
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const clientCode = document.getElementById('clientCode').value.trim();
+    const pin = document.getElementById('pin').value.trim();
+    const errorMsg = document.getElementById('login-error');
+    
+    errorMsg.style.display = 'none';
+
+    try {
+        // CORRECTION MAJEURE : On attend la liste des utilisateurs de Firebase/LocalStorage
+        const users = await getUsers(); 
+
+        // Recherche de l'utilisateur dans la liste 'users'
+        const user = users.find(u => u.clientCode === clientCode && u.pin === pin);
+        
+        if (user) {
+            // Connexion réussie
+            localStorage.setItem('currentUserCode', user.clientCode);
+            window.location.href = 'dashboard.html';
+        } else {
+            // Identifiants incorrects
+            errorMsg.textContent = "Code client ou PIN incorrect.";
+            errorMsg.style.display = 'block';
+        }
+    } catch (error) {
+        // Ce bloc est exécuté si la connexion à Firebase échoue (RÈGLES DE SÉCURITÉ !)
+        console.error("Erreur durant la tentative de connexion:", error);
+        errorMsg.textContent = "Erreur: Impossible d'accéder aux données utilisateur. Veuillez vérifier la configuration Firebase ou votre connexion.";
+        errorMsg.style.display = 'block';
+    }
+});
+</script>
+</body>
+</html>

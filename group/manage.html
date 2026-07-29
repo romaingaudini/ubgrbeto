@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ecobank - Administration (Manage)</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Styles spécifiques au mode Admin */
+        .manage-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .manage-card {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        /* Style Admin : Rouge pour l'alerte/danger de manipuler les données */
+        header {background: #c9302c; /* Rouge foncé Admin */ color: #fff;}
+        .sidebar {border-right: 1px solid #c9302c;}
+        
+        /* Bouton Admin en rouge */
+        .btn-primary-admin {
+            background: #c9302c;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            display: block;
+            width: 100%;
+        }
+        .btn-primary-admin:hover {
+            opacity: 0.9;
+            background: #d9534f;
+        }
+        /* Styles pour les messages de succès/erreur */
+        .success, .error {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        /* Style pour les champs de formulaire */
+        .manage-card input[type="text"], .manage-card input[type="number"], .manage-card input[type="email"], 
+        .manage-card select, .manage-card input[type="password"] {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <img src="https://www.ecobank.com/images/ecobank-logo.png" alt="Ecobank Logo" height="30">
+        <small style="display:block; font-size: 1.2em;">ADMINISTRATION - Gestion des Données de Simulation</small>
+    </div>
+    <div>
+        <input type="text" placeholder="Rechercher sur le site" style="padding:6px 8px; border-radius:5px; border: none;">
+    </div>
+</header>
+<nav>
+    <a href="dashboard.html" style="color: #fff; background: #d9534f; padding: 10px 15px;">⬅️ Retour à la Simulation Client</a>
+    <a href="#" onclick="if(confirm('ATTENTION: Voulez-vous réinitialiser TOUTES les données (Local Storage & Firebase)?')) { localStorage.clear(); window.location.href='index.html'; }" style="color: #fff; background: #c9302c; padding: 10px 15px;">Réinitialiser TOUTES les Données (Danger)</a>
+</nav>
+
+<div class="full-container">
+    <aside class="sidebar">
+        <h3>Menu Administration</h3>
+        <p><a href="#user-select">Sélection Utilisateur</a></p>
+        <p><a href="#manage-soldes">Soldes & Infos</a></p>
+        <p><a href="#manage-histo">Historique</a></p>
+        <p><a href="#manage-profil">Profil & Carte</a></p>
+        <p><a href="#manage-new">Créer un Profil</a></p>
+        <button onclick="window.location.href='index.html'" class="btn-primary-admin" style="margin-top: 20px;">Quitter l'Admin</button>
+    </aside>
+
+    <main class="main">
+        <h2 id="user-select">Accès au Panneau de Gestion</h2>
+        <p style="color:#c9302c; font-weight:bold;">Code PIN Admin requis: <span style="font-size: 1.2em;">**0000**</span></p>
+        
+        <div id="admin-login-area" class="form-card">
+            <h3>Authentification</h3>
+            <form id="admin-login-form">
+                <label for="adminPin">PIN Administrateur (0000) :</label>
+                <input type="password" id="adminPin" placeholder="Entrez 0000" required> 
+                <p id="login-error" class="error" style="display: none;"></p>
+                <button type="submit" class="btn-primary-admin">Accéder au Panneau</button> 
+            </form>
+        </div>
+
+        <div id="main-admin-content" style="display: none;">
+            
+            <div class="form-card">
+                <label for="select-user">Sélectionner l'utilisateur à modifier :</label>
+                <select id="select-user" style="width: 100%;" onchange="loadUserData()">
+                    <option value="">-- Choisir un client --</option>
+                    </select>
+                <p id="current-managed-user" style="margin-top: 10px; font-weight: bold;">Aucun utilisateur sélectionné.</p>
+                <p class="success" id="general-success" style="display: none;"></p>
+                <p class="error" id="general-error" style="display: none;"></p>
+            </div>
+            
+            <div id="manage-controls" style="display: none;">
+                
+                <hr><h3 id="manage-soldes">Soldes, RIB et Conseiller</h3>
+                <div class="manage-grid">
+                    <div class="manage-card">
+                        <h4>Modifier Solde</h4>
+                        <form id="form-solde">
+                            <label for="new-solde">Nouveau Solde :</label>
+                            <input type="number" id="new-solde" step="0.01" required>
+                            <button type="submit" class="btn-primary-admin">Mettre à jour le Solde</button>
+                        </form>
+                    </div>
+                    <div class="manage-card">
+                        <h4>Modifier Conseiller</h4>
+                        <form id="form-conseiller">
+                            <label for="new-conseiller">Nom du Conseiller :</label>
+                            <input type="text" id="new-conseiller" required>
+                            <label for="new-conseiller-email">Email du Conseiller :</label>
+                            <input type="email" id="new-conseiller-email" required>
+                            <button type="submit" class="btn-primary-admin">Mettre à jour le Conseiller</button>
+                        </form>
+                    </div>
+                </div>
+
+                <hr><h3 id="manage-histo">Ajouter une Opération d'Historique</h3>
+                <div class="form-card">
+                    <form id="form-historique">
+                        <label for="histo-date">Date (JJ/MM/AAAA) :</label>
+                        <input type="text" id="histo-date" value="06/11/2025" pattern="\d{2}/\d{2}/\d{4}" placeholder="JJ/MM/AAAA" required>
+                        <label for="histo-libelle">Libellé :</label>
+                        <input type="text" id="histo-libelle" placeholder="Ex: Dépôt en espèces, Agio" required>
+                        <label for="histo-montant">Montant :</label>
+                        <input type="number" id="histo-montant" step="0.01" placeholder="Ex: 500.00 (Crédit) ou -15.50 (Débit)" required>
+                        <p class="success" id="histo-message" style="display:none;"></p>
+                        <button type="submit" class="btn-primary-admin">Ajouter à l'Historique & Mettre à jour Solde</button>
+                    </form>
+                </div>
+                
+                <hr><h3 id="manage-profil">Informations Profil, Carte et RIB</h3>
+                <div class="manage-grid">
+                    <div class="manage-card">
+                        <h4>Modifier Infos de Base & RIB</h4>
+                        <form id="form-profil">
+                            <label for="profil-nom-admin">Nom :</label><input type="text" id="profil-nom-admin" required>
+                            <label for="profil-adresse-admin">Adresse :</label><input type="text" id="profil-adresse-admin" required>
+                            <label for="rib-iban-admin">IBAN :</label><input type="text" id="rib-iban-admin" required>
+                            <label for="rib-domiciliation-admin">Domiciliation :</label><input type="text" id="rib-domiciliation-admin" required>
+                            <label for="rib-agence-admin">Agence :</label><input type="text" id="rib-agence-admin" required>
+                            <label for="rib-bic-admin">BIC (Swift) :</label><input type="text" id="rib-bic-admin" required>
+                            <button type="submit" class="btn-primary-admin">Mise à jour Profil/RIB</button>
+                        </form>
+                    </div>
+                    <div class="manage-card">
+                        <h4>Gérer la Carte</h4>
+                        <form id="form-carte">
+                            <label for="carte-num-admin">Numéro (16 chiffres) :</label><input type="text" id="carte-num-admin" maxlength="19" required>
+                            <label for="carte-exp-admin">Expiration (MM/AA) :</label><input type="text" id="carte-exp-admin" maxlength="5" required>
+                            <label for="carte-titulaire-admin">Nom du Titulaire :</label><input type="text" id="carte-titulaire-admin" required>
+                            <label for="carte-active-admin">Statut :</label>
+                            <select id="carte-active-admin"><option value="true">Active</option><option value="false">Inactive</option></select>
+                            <button type="submit" class="btn-primary-admin">Mise à jour Carte</button>
+                        </form>
+                    </div>
+                </div>
+                
+                <hr><h3 id="manage-new">Créer un Nouveau Profil</h3>
+                <div class="form-card">
+                    <form id="form-new-user">
+                        <label for="new-client-code">Code Client (10 chiffres) :</label><input type="text" id="new-client-code" maxlength="10" pattern="\d{10}" required>
+                        <label for="new-pin-code">PIN (6 chiffres) :</label><input type="text" id="new-pin-code" maxlength="6" pattern="\d{6}" required>
+                        <label for="new-nom">Nom Complet :</label><input type="text" id="new-nom" required>
+                        <label for="new-solde-initial">Solde Initial :</label><input type="number" id="new-solde-initial" step="0.01" required>
+                        <p class="success" id="new-user-message" style="display:none;"></p>
+                        <button type="submit" class="btn-primary-admin">Créer le Profil</button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+</div>
+
+<footer>
+    Mentions légales – Sécurité – Accessibilité – Plan du site
+</footer>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script src="shared.js"></script>
+<script>
+// Le code PIN pour l'accès administrateur
+const ADMIN_PIN = '0000'; 
+let managedUser = null;
+
+// --- Fonctions d'Utilitaires (Ajoutées pour la complétude) ---
+
+/** Formate le montant en devise (XOF par défaut) */
+function formatCurrency(amount) {
+    if (typeof amount !== 'number') return '';
+    return amount.toLocaleString('fr-FR', {
+        style: 'currency',
+        currency: 'XOF', // Vous pouvez ajuster la devise ici
+        minimumFractionDigits: 2
+    });
+}
+
+/** Fonction placeholder pour mettre à jour la barre latérale/header (appelée à la fin) */
+function updateUI() {
+    // Dans l'Admin, cette fonction est généralement vide ou gère les liens actifs
+    console.log("UI mis à jour (Admin)");
+}
+
+// --- Le reste de votre code (Fonctions d'Utilitaires et Logique) ---
+// ... (le reste de vos fonctions comme populateUserSelect, showGeneralMessage, etc.)
+
+/** Charge la liste des utilisateurs dans le menu déroulant */
+async function populateUserSelect() {
+    const selectUser = document.getElementById('select-user');
+    selectUser.innerHTML = '<option value="">-- Choisir un client --</option>'; // Réinitialiser
+    
+    try {
+        const users = await getUsers(); // Fonction de shared.js
+        users.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.clientCode;
+            option.textContent = `${user.nom} (${user.clientCode})`;
+            selectUser.appendChild(option);
+        });
+    } catch (e) {
+        showGeneralMessage("Erreur de chargement des utilisateurs: Impossible de lire la base de données.", 'error');
+        console.error("Erreur de chargement des utilisateurs:", e);
+    }
+}
+
+/** Formate le numéro de carte */
+function formatCardNumber(number) {
+    if (!number) return '';
+    // Supprime les espaces et insère un espace tous les 4 chiffres
+    return number.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim();
+}
+
+/** Affiche un message de succès/erreur général (pour les formulaires de sélection/conseiller/solde/profil/carte) */
+function showGeneralMessage(message, type = 'success') {
+    const elSuccess = document.getElementById('general-success');
+    const elError = document.getElementById('general-error');
+    
+    // Réinitialiser les deux
+    elSuccess.style.display = 'none';
+    elError.style.display = 'none';
+    
+    const targetEl = type === 'success' ? elSuccess : elError;
+    targetEl.textContent = message;
+    targetEl.style.display = 'block';
+
+    // Masque le message après 5 secondes
+    setTimeout(() => targetEl.style.display = 'none', 5000);
+}
+
+/** Affiche un message spécifique à l'historique */
+function showHistoMessage(message, type = 'success') {
+    const el = document.getElementById('histo-message');
+    el.className = type === 'success' ? 'success' : 'error';
+    el.textContent = message;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 5000);
+}
+
+// --- Logique de Chargement/Mise à jour des Données ---
+
+/** Charge les données de l'utilisateur sélectionné dans les formulaires */
+async function loadUserData() { 
+    const code = document.getElementById('select-user').value;
+    // Récupérer la liste complète des utilisateurs (si elle est à jour)
+    const users = await getUsers(); 
+    managedUser = users.find(u => u.clientCode === code);
+    
+    // Affichage des contrôles et du nom de l'utilisateur sélectionné
+    document.getElementById('manage-controls').style.display = managedUser ? 'block' : 'none';
+    document.getElementById('current-managed-user').textContent = managedUser ? `Utilisateur sélectionné: ${managedUser.nom} (${managedUser.clientCode})` : 'Aucun utilisateur sélectionné.';
+
+    if (managedUser) {
+        // Soldes et Conseiller
+        document.getElementById('new-solde').value = managedUser.solde.toFixed(2);
+        document.getElementById('new-conseiller').value = managedUser.conseiller || '';
+        document.getElementById('new-conseiller-email').value = managedUser.emailConseiller || '';
+
+        // Profil et RIB
+        document.getElementById('profil-nom-admin').value = managedUser.nom;
+        document.getElementById('profil-adresse-admin').value = managedUser.adresse;
+        document.getElementById('rib-iban-admin').value = managedUser.rib?.iban || '';
+        document.getElementById('rib-domiciliation-admin').value = managedUser.rib?.domiciliation || '';
+        document.getElementById('rib-agence-admin').value = managedUser.rib?.agence || '';
+        document.getElementById('rib-bic-admin').value = managedUser.rib?.bic || '';
+        
+        // Carte
+        document.getElementById('carte-num-admin').value = formatCardNumber(managedUser.carte?.numero || '');
+        document.getElementById('carte-exp-admin').value = managedUser.carte?.expiration || '';
+        document.getElementById('carte-titulaire-admin').value = managedUser.carte?.titulaire || '';
+        document.getElementById('carte-active-admin').value = managedUser.carte?.active ? 'true' : 'false';
+    }
+}
+
+/** Mise à jour générique de l'utilisateur géré */
+async function updateManagedUser(updates) { 
+    if (managedUser) {
+        // 1. Logique pour fusionner les mises à jour imbriquées (rib, carte)
+        if (updates.rib) {
+            managedUser.rib = { ...managedUser.rib, ...updates.rib };
+            delete updates.rib; 
+        }
+        if (updates.carte) {
+            managedUser.carte = { ...managedUser.carte, ...updates.carte };
+            delete updates.carte;
+        }
+        
+        // 2. Appliquer les mises à jour de haut niveau
+        Object.assign(managedUser, updates);
+        
+        try {
+            // saveUserToFirestore doit être dans shared.js
+            await saveUserToFirestore(managedUser.clientCode, managedUser); 
+            showGeneralMessage(`Mise à jour du profil de ${managedUser.nom} effectuée!`);
+            await loadUserData(); // Recharger les données pour rafraîchir
+        } catch (error) {
+            console.error("Erreur de mise à jour Firebase:", error);
+            showGeneralMessage(`Erreur lors de la mise à jour: ${error.message || 'Échec de la connexion/permissions Firebase.'}`, 'error');
+        }
+    } else {
+        showGeneralMessage("Veuillez sélectionner un utilisateur avant de mettre à jour.", 'error');
+    }
+}
+
+// --- Événements du DOM ---
+
+document.addEventListener('DOMContentLoaded', async () => { 
+    // 1. Gestion de l'authentification Admin
+    document.getElementById('admin-login-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const pin = document.getElementById('adminPin').value;
+        const errorMsg = document.getElementById('login-error');
+
+        if (pin === ADMIN_PIN) {
+            document.getElementById('admin-login-area').style.display = 'none';
+            document.getElementById('main-admin-content').style.display = 'block';
+            errorMsg.style.display = 'none';
+            populateUserSelect(); 
+        } else {
+            errorMsg.textContent = 'Code PIN Administrateur incorrect.';
+            errorMsg.style.display = 'block';
+        }
+    });
+    
+    // 2. Gestion du Solde
+    document.getElementById('form-solde').addEventListener('submit', async (e) => { 
+        e.preventDefault();
+        const solde = parseFloat(document.getElementById('new-solde').value);
+        if (managedUser && !isNaN(solde)) {
+            await updateManagedUser({ solde: solde }); 
+        }
+    });
+
+    // 3. Gestion du Conseiller
+    document.getElementById('form-conseiller').addEventListener('submit', async (e) => { 
+        e.preventDefault();
+        const conseiller = document.getElementById('new-conseiller').value;
+        const emailConseiller = document.getElementById('new-conseiller-email').value;
+        if (managedUser) {
+            await updateManagedUser({ conseiller, emailConseiller }); 
+        }
+    });
+    
+    // 4. Gestion de l'Historique
+    document.getElementById('form-historique').addEventListener('submit', async (e) => { 
+        e.preventDefault();
+        const date = document.getElementById('histo-date').value;
+        const libelle = document.getElementById('histo-libelle').value;
+        const montant = parseFloat(document.getElementById('histo-montant').value);
+
+        // Validation de base (utilisateur sélectionné, montant, format de date)
+        if (!managedUser) {
+            showHistoMessage('Veuillez sélectionner un utilisateur avant d\'ajouter une opération.', 'error');
+            return;
+        }
+        if (isNaN(montant) || !date.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+            showHistoMessage('Veuillez entrer un montant valide et la date au format JJ/MM/AAAA.', 'error');
+            return;
+        }
+
+        const type = montant >= 0 ? 'credit' : 'debit';
+        // Utiliser la valeur absolue pour le montant stocké (le type gère le signe)
+        const newEntry = { date: date, libelle: libelle, montant: Math.abs(montant), type: type };
+        
+        managedUser.historique = managedUser.historique || []; 
+        managedUser.historique.unshift(newEntry); // Ajouter au début
+        managedUser.solde = managedUser.solde + montant; // Mettre à jour le solde
+
+        try {
+            // Appel à updateManagedUser, qui utilise saveUserToFirestore
+            await updateManagedUser({ historique: managedUser.historique, solde: managedUser.solde });
+
+            showHistoMessage(`Opération ajoutée (Nouveau Solde: ${formatCurrency(managedUser.solde)})!`);
+            document.getElementById('form-historique').reset();
+            // Garder la date par défaut pour la prochaine opération
+            document.getElementById('histo-date').value = date; 
+
+        } catch (error) {
+            showHistoMessage(`Erreur lors de l'ajout: ${error.message || 'Échec de la connexion/permissions Firebase.'}`, 'error');
+        }
+    });
+    
+    // 5. Gestion du Profil et RIB
+    document.getElementById('form-profil').addEventListener('submit', async (e) => { 
+        e.preventDefault();
+        if (managedUser) {
+            const updates = {
+                nom: document.getElementById('profil-nom-admin').value,
+                adresse: document.getElementById('profil-adresse-admin').value,
+                rib: {
+                    iban: document.getElementById('rib-iban-admin').value,
+                    domiciliation: document.getElementById('rib-domiciliation-admin').value,
+                    agence: document.getElementById('rib-agence-admin').value,
+                    bic: document.getElementById('rib-bic-admin').value
+                }
+            };
+            await updateManagedUser(updates); 
+        }
+    });
+
+    // 6. Gestion de la Carte
+    document.getElementById('form-carte').addEventListener('submit', async (e) => { 
+        e.preventDefault();
+        if (managedUser) {
+            const updates = {
+                carte: {
+                    numero: document.getElementById('carte-num-admin').value,
+                    expiration: document.getElementById('carte-exp-admin').value,
+                    titulaire: document.getElementById('carte-titulaire-admin').value,
+                    active: document.getElementById('carte-active-admin').value === 'true' 
+                }
+            };
+            await updateManagedUser(updates); 
+        }
+    });
+
+    // 7. Création de Nouveau Profil
+    document.getElementById('form-new-user').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const clientCode = document.getElementById('new-client-code').value;
+        const pin = document.getElementById('new-pin-code').value;
+        const nom = document.getElementById('new-nom').value;
+        const solde = parseFloat(document.getElementById('new-solde-initial').value);
+        const successMsg = document.getElementById('new-user-message');
+        
+        successMsg.style.display = 'none';
+
+        if (!clientCode || !pin || !nom || isNaN(solde) || clientCode.length !== 10 || pin.length !== 6) {
+             successMsg.className = 'error';
+             successMsg.textContent = 'Veuillez remplir tous les champs (Code Client 10 chiffres, PIN 6 chiffres, Nom, Solde).';
+             successMsg.style.display = 'block';
+             return;
+        }
+        
+        // Création de l'objet utilisateur avec les valeurs par défaut
+        const newUser = {
+            clientCode: clientCode,
+            pin: pin,
+            nom: nom,
+            adresse: 'Adresse par Défaut',
+            solde: solde,
+            conseiller: 'Conseiller Général',
+            emailConseiller: 'conseiller@ecobank.com',
+            rib: {
+                iban: `FR76 0000 0000 0000 0000 ${clientCode.substring(6)}`, // IBAN par défaut basé sur le code client
+                domiciliation: 'ECOBANK DEFAUT',
+                agence: 'AGENCE DEFAUT',
+                bic: 'ECOXXX'
+            },
+            carte: {
+                numero: `4000 1234 5678 ${clientCode.substring(6)}`, // Carte par défaut
+                titulaire: nom.toUpperCase(),
+                expiration: '01/30',
+                active: true
+            },
+            historique: [{ date: new Date().toLocaleDateString('fr-FR'), libelle: 'Ouverture de Compte', montant: solde, type: 'credit' }]
+        };
+
+        try {
+            await saveUserToFirestore(clientCode, newUser);
+
+            successMsg.className = 'success';
+            successMsg.textContent = `Profil de ${nom} créé avec succès! Code: ${clientCode}`;
+            successMsg.style.display = 'block';
+            document.getElementById('form-new-user').reset();
+            
+            // Recharger la liste déroulante pour inclure le nouvel utilisateur
+            await populateUserSelect();
+        } catch (error) {
+            console.error("Erreur lors de la création du profil:", error);
+            // Afficher l'erreur Firebase (souvent un problème de règles/connexion)
+            successMsg.className = 'error';
+            successMsg.textContent = `Échec de la création: ${error.message || 'Problème de connexion/permissions Firebase.'}`;
+            successMsg.style.display = 'block';
+        }
+    });
+    
+    // Au chargement, on vérifie si un utilisateur client est connecté et on met à jour la sidebar
+    updateUI(); 
+});
+</script>
+</body>
+</html>
